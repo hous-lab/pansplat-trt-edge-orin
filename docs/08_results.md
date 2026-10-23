@@ -1,0 +1,47 @@
+# 08 — Results & boundaries
+
+## Milestone chain (Orin, chain-only latency)
+
+30,000 ms (torch eager) → 1,693 (9-graph file chain + Rodrigues) → 1,007 (GPU-resident runner + adapter kernel) → 645 (CV kernel inline) → 587.8 (gh01 split) → **558.9 (flash attention splits) ms**. Rendering adds 20.6 ms → e2e ~567 ms.
+
+Each step was adopted on measured wins after equivalence held; each rejection also had a reason (INT8: three documented strikes — see below).
+
+## Platform table
+
+| Platform | Recon (chain) | Render | Notes |
+|---|---:|---:|---|
+| Orin AGX 64GB (sm_87, TRT 10.3) | 546.3–551.2 ms | 20.6 ms | quiet window; VLA co-resident labeled |
+| A6000 (sm_86, TRT 10.16) | 129.97 ms | — | shared card ±10% |
+| 4090 Laptop (sm_89, TRT 10.4) | (dev host, equivalence only) | — | not a latency contract |
+
+## Release verification (fresh tree, 2026-10)
+
+The released tree re-runs the full chain on the Orin and the 4090 dev host. On Orin (quiet cool window, MAXN, GR3D at 1300.5/1300.5 MHz, 99% utilization during measurement): reconstruction min-of-50 = 555.1 ms (mean 556.4), repeat runs 555.1–561.0 ms — about 1% above the quiet-window contract band above. Rebuilt engines drift ±1–2% in TRT tactic selection, and the figure is consistent with the 558.9 flash-splits milestone (re-measured with current source here). The synth gate passes on identical inputs: means 0.9999994, cov 0.9999767, harm 0.9997806, opa 0.9999018 (gate ≥ 0.9997). On the 4090 dev host the chain runs 138.97–142.22 ms min-of-10 with the same gate PASS.
+
+## Kernel wins (with calibers)
+
+| Kernel | Bench caliber | In-chain caliber |
+|---|---|---|
+| CV | 364.3→24.5 ms (14.8×) | 364.3→43.7 ms |
+| Adapter | 818→25 ms (32×) | included |
+| Flash | predicted −41, measured −29 ms | segment-table audit followed |
+| Rodrigues/unroll fix | 29.1 s→1.69 s (17.7×) | encoder FLOPs unchanged; compiler pathology, not math |
+
+Bench caliber = standalone harness; in-chain = runner segment table. The two calibers differ because the bench isolates the workload; both are reported to keep honesty about where the win lands.
+
+## INT8: three documented strikes (boundary, not failure)
+
+Final delivery is FP16. INT8 PTQ strikes:
+1. Bandwidth-bound segments: little to gain (1.11×)
+2. Heavy-tail activations collapse PSNR (19.82 dB)
+3. Transfer-bound segments: no gain (1.02×)
+
+Each strike produced a reusable discriminator (where quantization helps vs not); archived with reopen conditions. FP16 with kernel replacement was the right operating point.
+
+## Honest boundaries
+
+- Renderer is a fork (vendored, direct-called), not a self-built rasterizer; no interactive viewer.
+- Acceptance = golden single-scene equivalence; no multi-scene quality matrix.
+- Cold start 3.1–3.6 s (untreated), separate from steady state.
+- 256-res tier: latency measured (A6000 ~79 ms), quality never evaluated — decision data missing, frozen.
+- INT8: boundary discovery, not success.
