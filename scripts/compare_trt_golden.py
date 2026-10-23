@@ -62,10 +62,14 @@ for n in ("image", "extrinsics", "near", "far", "mono_image", "cube_image"):
 from einops import repeat
 from src.model.types import Gaussians
 g_trt = Gaussians(
-    means=torch.from_numpy(outs["means"]).cuda(),
-    covariances=torch.from_numpy(outs["covariances"]).cuda(),
-    harmonics=torch.from_numpy(outs["harmonics"]).cuda(),
-    opacities=torch.from_numpy(outs["opacities"]).cuda())
+    means=torch.from_numpy(
+        outs["means"].reshape(npz["torch_means"].shape)).cuda(),
+    covariances=torch.from_numpy(
+        outs["covariances"].reshape(npz["torch_covariances"].shape)).cuda(),
+    harmonics=torch.from_numpy(
+        outs["harmonics"].reshape(npz["torch_harmonics"].shape)).cuda(),
+    opacities=torch.from_numpy(
+        outs["opacities"].reshape(npz["torch_opacities"].shape)).cuda())
 extr = ctx_gpu["extrinsics"]
 near = repeat(ctx_gpu["near"][:, 0], "b -> b v", v=1)
 far = repeat(ctx_gpu["far"][:, 0], "b -> b v", v=1)
