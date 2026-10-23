@@ -14,7 +14,8 @@ ships this directory empty (this README aside); `run_pipeline.sh` populates it:
   (random context + checkpoint xy grids).
 - `export/golden_512.npz` — golden anchor (4 gaussian-parameter tensors of the
   reference scene from the PyTorch model, used by the accuracy gates).
-  Self-produced; published on the Hugging Face companion repo. It is
+  Self-produced; published on the Hugging Face companion repo (https://huggingface.co/hous-lab/pansplat-trt-edge-orin).
+  It is
   the accuracy anchor AND the golden-tier input source - consumers need
   it for the numerical gate. Regenerable via `scripts/dump_golden.py` from your own
   checkpoint + dataset.

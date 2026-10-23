@@ -6,9 +6,9 @@
 
 | Tier | Invocation | Inputs | Gate |
 |---|---|---|---|
-| golden | `PANSPLAT_INPUTS=golden bash run_pipeline.sh` | preprocessed MP3D scene via the upstream dataloader | 4-field cosine + render PSNR vs `export/golden_512.npz` |
+| golden | `PANSPLAT_INPUTS=golden bash run_pipeline.sh` | golden anchor npz + checkpoint xy grids (dataset-free) | 4-field cosine + render PSNR vs `export/golden_512.npz` |
 | smoke | `bash run_pipeline.sh` (default) | seeded-random context + checkpoint xy grids (10 bins) | structural gate only (`verify_smoke.py`: dump sizes + finiteness) - NOT a numerical gate |
-| HF | `PANSPLAT_SKIP_EXPORT=1 bash run_pipeline.sh` | ONNX fetched from the HF repo | validates 21 ONNX against the manifest |
+| HF | `PANSPLAT_SKIP_EXPORT=1 bash run_pipeline.sh` | ONNX fetched from [https://huggingface.co/hous-lab/pansplat-trt-edge-orin](https://huggingface.co/hous-lab/pansplat-trt-edge-orin) | validates 21 ONNX against the manifest |
 
 The smoke tier exercises the whole chain without any dataset: `scripts/make_synth_inputs.py` writes the 10 binaries (random context + checkpoint xy grids, shapes locked to runner.cu's buffer table). It is a bring-up / integrity check, not a numerical gate: the gh_s*_cnn engines carry the golden scene's encoded features as graph constants (runner.cu binds no features/correlation/image to them; gh_s0_cnn takes no inputs at all), and the gh_s*_mlp engines bake the xy grids. The deployment is a single-scene feature-cache design (docs/01_architecture.md); with non-golden inputs the outputs are not numerically meaningful.
 

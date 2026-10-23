@@ -198,6 +198,7 @@ export/runner_bins/
 export/engines/
 export/onnx/
 export/.ok/
+export/scratch/
 # golden_512.npz is gitignored like every *.npz; it is distributed via the
 # Hugging Face companion repo (hous-lab/pansplat-trt-edge-orin) only.
 # Vendored third_party stays tracked despite the *.onnx/*.npz blanket rules:

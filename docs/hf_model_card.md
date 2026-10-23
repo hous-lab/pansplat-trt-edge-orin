@@ -14,9 +14,9 @@ Prebuilt artifacts for [pansplat-trt-edge-orin](https://github.com/hous-lab/pans
 | Path | Contents | Size |
 |---|---|---|
 | `onnx/` | 23 graphs: the 21 deployment graphs + 2 split intermediates (manifest: `scripts/release_manifest.yaml` in the GitHub repo) | ~0.65 GB |
-| `engines/x86-trt10.16/` | 21 engines, built with trtexec (TensorRT 10.16) on x86 (A6000, sm_86) | ~0.3 GB |
-| `engines/orin-trt10.3/` | 21 engines, built with trtexec (TensorRT 10.3) on Jetson AGX Orin (sm_87) | ~0.3 GB |
-| `golden_512.npz` | golden-tier runner inputs (single MP3D scene, 512x1024), self-produced quality anchor | 331 MB |
+| `engines/x86-trt10.16/` | 21 engines, built with trtexec (TensorRT 10.16) on x86 (A6000, sm_86) | ~0.4 GB |
+| `engines/orin-trt10.3/` | 21 engines, built with trtexec (TensorRT 10.3) on Jetson AGX Orin (sm_87) | ~0.6 GB |
+| `golden_512.npz` | anchor pack: golden-scene runner inputs + the four torch-reference Gaussian fields, self-produced (single MP3D scene, 512x1024) | 331 MB |
 
 ## Usage
 

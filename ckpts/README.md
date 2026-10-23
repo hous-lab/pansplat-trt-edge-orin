@@ -42,6 +42,6 @@ Upstream-hosted files — weights **and** any anchor/statistics files the
 upstream publishes — are download-only: fetch from the upstream source, place
 at the path listed above, verify sha256. None are committed to this repository,
 and rehosting them on our Hugging Face — including any retrained or derived
-variant — is prohibited. The Hugging Face companion repo
-(`hous-lab/pansplat-trt-edge-orin`) hosts only our own pipeline-exported
+variant — is prohibited. The Hugging Face companion repo (https://huggingface.co/hous-lab/pansplat-trt-edge-orin)
+hosts only our own pipeline-exported
 artifacts (ONNX segments, prebuilt engines, golden anchor).

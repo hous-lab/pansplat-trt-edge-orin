@@ -2,7 +2,7 @@
 
 Real-time feed-forward panoramic 3D Gaussian Splatting on Jetson AGX Orin.
 
-PanSplat (CVPR 2025) reconstructs a 3D Gaussian scene from two 512×1024 ERP images in a single forward pass. The stock PyTorch pipeline takes ~30 s per frame on Orin — this project deploys it as **21 TensorRT FP16 engines plus 5 custom CUDA kernel classes (41 kernel launches) forming a 31-segment GPU-resident chain**, and cuts end-to-end latency to **~567 ms** with no measurable quality loss.
+[PanSplat](https://github.com/chengzhag/PanSplat) (CVPR 2025) reconstructs a 3D Gaussian scene from two 512×1024 ERP images in a single forward pass. The stock PyTorch pipeline takes ~30 s per frame on Orin — this project deploys it as **21 TensorRT FP16 engines plus 5 custom CUDA kernel classes (41 kernel launches) forming a 31-segment GPU-resident chain**, and cuts end-to-end latency to **~567 ms** with no measurable quality loss.
 
 ## Results
 
@@ -42,7 +42,8 @@ Engine-internal math stays FP32; engines take FP16 inputs. Segment table, equiva
 #    logs/nvpl49ge/checkpoints/last.ckpt   (sha256 in ckpts/README.md)
 
 # 3. Golden tier = the accuracy gate (needs the golden anchor npz -
-#    dataset-free; fetch per export/README.md)
+#    dataset-free; fetch from the HF artifacts repo: https://huggingface.co/hous-lab/pansplat-trt-edge-orin)
+#    - see export/README.md
 PANSPLAT_INPUTS=golden bash run_pipeline.sh
 
 # 4. Smoke tier (default): pipeline bring-up only. The 21-engine chain
