@@ -34,7 +34,10 @@ mkdir -p "$OKDIR" export/scratch
 # ---- step 2: runner inputs -----------------------------------------------
 log "step 2/8 runner inputs"
 if [ ! -f "$OKDIR/02_inputs" ]; then
-  if [ ! -f export/golden_512.npz ]; then
+  # golden_512.npz is only consumed by the golden tier; the synthetic tier is
+  # dataset-free and must not depend on the torch trace (dump_golden needs the
+  # checkpoint and the full torch env). Produce it on demand, golden tier only.
+  if [ "${PANSPLAT_INPUTS:-synth}" = "golden" ] && [ ! -f export/golden_512.npz ]; then
     echo "producing export/golden_512.npz (torch trace scene)"
     python3 scripts/dump_golden.py $OVERRIDES
   fi
