@@ -109,7 +109,7 @@ if [ ! -f "$OKDIR/06_gates" ]; then
     python3 scripts/compare_trt_golden.py export/scratch/golden_run.means.f32 \
       export/scratch/golden_run.cov.f32 \
       export/scratch/golden_run.harm.f32 \
-      export/scratch/golden_run.opa.f32
+      export/scratch/golden_run.opa.f32 $OVERRIDES
   else
     echo "smoke tier: structural gate only - the chain bakes the golden"
     echo "scene encoding (see docs/05_accuracy.md); numerical validation ="
