@@ -20,7 +20,7 @@ Synthetic tier exists so the whole chain can be exercised without any dataset: `
 4. **engines** — `detect_platform.py` keys engines by arch+TRT version into `export/engines/<platform>/`; trtexec FP16 builds with per-engine logs; ~41 GB free RAM needed for the gh_s3 pair (Myelin workspace), hard guard
 5. **build cxx** — `make -C cxx all` (single nvcc, no torch dependency)
 6. **accuracy gates** — golden tier: runner dump → `compare_trt_golden.py` (4-field cos + render PSNR); synth tier: `verify_synth_gate.py`
-7. **latency bench** — Orin: MAXN + quiet window, min-of-N discipline (docs/03); x86: chain timing + per-engine numbers via `scripts/bench_trt.py`
+7. **latency bench** — Orin: MAXN + quiet window, min-of-N discipline (docs/03); `PANSPLAT_RUNNER_ITERS` raises the timed-iteration count (default 10; a higher N gives a steadier min, e.g. 50); x86: chain timing + per-engine numbers via `scripts/bench_trt.py`
 8. **summary** — contract reference numbers banner
 
 ## Platform note
