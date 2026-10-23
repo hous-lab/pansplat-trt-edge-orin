@@ -88,7 +88,7 @@ if [ ! -f "$OKDIR/04_engines" ]; then
       touch "$ENG_DIR/$engine.ok"
     fi
   done < <(python3 scripts/engine_build_list.py)
-  trtexec --version 2>/dev/null | head -1 > "$OKDIR/04_engines"
+  trtexec --version > "$OKDIR/04_engines" 2>/dev/null
   echo "engines in $ENG_DIR"
 fi
 
