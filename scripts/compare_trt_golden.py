@@ -9,7 +9,10 @@ for i, n in enumerate(names):
     outs[n] = np.fromfile(sys.argv[i + 1], dtype=np.float32)
 
 print(f"{'field':12s} {'max_abs':>10s} {'cosine':>12s}")
+COS_GATE = 0.99978        # golden-tier contract (docs/05_accuracy.md)
+PSNR_SANITY_DB = 52.0     # measured reference: 52.95 dB (docs/05_accuracy.md)
 ok = True
+cosines = {}
 for n in names:
     t = npz["torch_" + n].ravel()
     o = outs[n]
@@ -18,6 +21,9 @@ for n in names:
         ok = False
         continue
     c = float(np.dot(t, o) / (np.linalg.norm(t) * np.linalg.norm(o) + 1e-12))
+    cosines[n] = c
+    if c < COS_GATE:
+        ok = False
     d = float(np.abs(t - o).max())
     print(f"{n:12s} {d:10.3e} {c:12.9f}")
 
@@ -70,4 +76,12 @@ with torch.inference_mode():
     r_t = model.decoder.render_pano(g_t, extr[:, :1], near, far, None,
                                     context_extrinsics=extr)["color"].float()
 mse = (r_t - r_trt).pow(2).mean().item()
-print(f"e2e render(TRT gaussians vs torch): psnr = {-10 * np.log10(max(mse, 1e-12)):.2f} dB")
+psnr = -10 * np.log10(max(mse, 1e-12))
+print(f"e2e render(TRT gaussians vs torch): psnr = {psnr:.2f} dB")
+if psnr < PSNR_SANITY_DB:
+    print(f"FAIL: render PSNR {psnr:.2f} < sanity floor {PSNR_SANITY_DB} "
+          "(measured reference 52.95 dB - investigate before trusting the run)")
+    ok = False
+verdict = "PASS" if ok else "FAIL"
+print(f"GOLDEN-TIER GATE: {verdict} (cos >= {COS_GATE} per field, psnr >= {PSNR_SANITY_DB})")
+sys.exit(0 if ok else 1)

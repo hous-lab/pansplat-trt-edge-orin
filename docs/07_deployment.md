@@ -9,7 +9,7 @@
 ```bash
 # JetPack 6.2, TRT 10.3 on PATH (trtexec)
 nvpmodel -m 0 && jetson_clocks   # MAXN
-PANSPLAT_INPUTS=golden bash run_pipeline.sh   # synth tier is the default
+PANSPLAT_INPUTS=golden bash run_pipeline.sh   # accuracy gate; smoke is default
 ```
 
 Orin's 64 GB host RAM builds all 21 engines locally, including the gh_s3 pair. Follow docs/03 discipline for any number you publish.
@@ -26,7 +26,8 @@ Orin's 64 GB host RAM builds all 21 engines locally, including the gh_s3 pair. F
 PANSPLAT_SKIP_EXPORT=1 bash run_pipeline.sh
 ```
 
-Validates the 21 HF-fetched ONNX against the manifest, builds engines with the local trtexec, builds the runner, runs the synth tier gate. No dataset, no torch tracing.
+Validates the 21 HF-fetched ONNX against the manifest, builds engines with the local trtexec, builds the runner, runs the smoke gate (structural only). For the numerical
+gate fetch the anchor npz and run the golden tier - still dataset-free.
 
 ## Runner invocation
 

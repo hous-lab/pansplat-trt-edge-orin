@@ -41,8 +41,14 @@ Engine-internal math stays FP32; engines take FP16 inputs. Segment table, equiva
 # 2. Checkpoint: download per ckpts/README.md into
 #    logs/nvpl49ge/checkpoints/last.ckpt   (sha256 in ckpts/README.md)
 
-# 3. Golden-scene pipeline (dataset-free equivalent: PANSPLAT_INPUTS=synth)
+# 3. Golden tier = the accuracy gate (needs the golden anchor npz -
+#    dataset-free; fetch per export/README.md)
 PANSPLAT_INPUTS=golden bash run_pipeline.sh
+
+# 4. Smoke tier (default): pipeline bring-up only. The 21-engine chain
+#    bakes the golden-scene encoding - see docs/05_accuracy.md - so a
+#    non-golden input set has no numerical meaning here.
+bash run_pipeline.sh
 ```
 
 The pipeline is 8 idempotent steps with `export/.ok/` sentinels: guard → runner inputs → ONNX export (23 graphs) → 21 trtexec engine builds → CUDA runner build → accuracy gates → latency bench → summary. `PANSPLAT_SKIP_EXPORT=1` validates HF-fetched ONNX against the manifest and skips tracing — see [docs/02_pipeline.md](docs/02_pipeline.md).

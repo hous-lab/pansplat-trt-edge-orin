@@ -1,85 +1,95 @@
 #!/usr/bin/env python3
-"""Dataset-derived runner inputs: the 10 binaries runner.cu consumes.
+"""Runner inputs from the golden anchor pack.
 
-Runs the upstream dataloader on a preprocessed pano_grf scene (the same path
-dump_golden.py uses) and writes image / mono_image / cube_image / extrinsics /
-near / far plus the four xy_s* depth-candidate grids to export/runner_bins/,
-with a shapes.npz manifest alongside. Counterpart of make_synth_inputs.py,
-which writes seeded-random inputs with the same fixed shapes for dataset-free
-smoke runs.
+Writes the 10 binaries runner.cu consumes into
+export/runner_bins/ plus a shapes.npz manifest.
+Context tensors come from the self-produced golden
+anchor pack (place the HF download at
+export/golden_512.npz, no dataset needed); the xy
+grids come from the checkpoint buffers
+(gaussian-head model state, not scene data).
+Counterpart of make_synth_inputs.py (smoke tier).
 
-The runner binary is locked to the 512x1024 PanSplat config and the
-golden-scene candidate counts (5215/20860/83443/333772); the guards below
-fail fast if the composed config yields different counts (other resolution
-or encoder config) - rebuild engines + runner for that config first.
+Usage: python scripts/prepare_runner_inputs.py
+    +experiment=pansplat-512 mode=predict \
+    ++model.weights_path=<path to last.ckpt>
 """
+from pathlib import Path
 import sys
 import warnings
-from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 import numpy as np
 import torch
-from torch import Tensor
 from jaxtyping import install_import_hook
 
 with install_import_hook(("src",), ("beartype", "beartype")):
     from hydra import initialize, compose
-    from torch.utils.data import default_collate
-    from lightning_fabric.utilities.apply_func import apply_to_collection
     from src.config import load_typed_root_config
-    from src.dataset import get_dataset
     from src.global_cfg import set_cfg
     from src.model.encoder import get_encoder
     from src.model.model_wrapper import ModelWrapper
 
 warnings.filterwarnings("ignore")
 
-EXPECTED = {  # runner.cu load_bin element counts, per input
-    "xy_s0": (5215, 2),
-    "xy_s1": (20860, 2),
-    "xy_s2": (83443, 2),
-    "xy_s3": (333772, 2),
-}
-CTX_KEYS = ("image", "extrinsics", "near", "far", "mono_image", "cube_image")
+EXPECTED = {"xy_s0": (5215, 2), "xy_s1": (20860, 2),
+            "xy_s2": (83443, 2), "xy_s3": (333772, 2)}
+CTX = ("image", "mono_image", "cube_image",
+       "extrinsics", "near", "far")
 
 
-def main() -> None:
-    with initialize(config_path="../config", version_base=None):
-        cfg_dict = compose(config_name="main", overrides=sys.argv[1:])
+def main() -> int:
+    with initialize(config_path="../config",
+                    version_base=None):
+        cfg_dict = compose(config_name="main",
+                           overrides=sys.argv[1:])
     cfg = load_typed_root_config(cfg_dict)
     set_cfg(cfg_dict)
     torch.manual_seed(cfg_dict.seed)
     torch.set_float32_matmul_precision("high")
     encoder, _ = get_encoder(cfg.model.encoder)
-    model = ModelWrapper(cfg.optimizer, cfg.test, cfg.train, cfg.val,
-                         cfg.predict, encoder, None, None, [],
-                         None, cfg.model.weights_path, cfg.model.wo_defbp2)
+    model = ModelWrapper(
+        cfg.optimizer, cfg.test, cfg.train,
+        cfg.val, cfg.predict, encoder, None, None,
+        [], None, cfg.model.weights_path,
+        cfg.model.wo_defbp2)
     model.eval().cuda()
-    dataset = get_dataset(cfg.dataset, "test", None)
-    batch = default_collate([dataset[0]])
-    ctx = apply_to_collection(batch["context"], Tensor, lambda x: x.cuda())
+    gnpz = REPO / "export" / "golden_512.npz"
+    if not gnpz.exists():
+        print("missing", gnpz)
+        print("fetch it from the Hugging Face repo,")
+        print("or rerun scripts/dump_golden.py")
+        return 1
+    g = np.load(str(gnpz))
     out = REPO / "export" / "runner_bins"
-    out.mkdir(parents=True, exist_ok=True)
-    for k in CTX_KEYS:
-        a = np.ascontiguousarray(ctx[k].float().cpu().numpy(), dtype=np.float32)
-        a.tofile(out / f"{k}.bin")
-    shapes = {}
-    for k in CTX_KEYS:
-        shapes[k] = np.array(ctx[k].shape)
+    for k in CTX:
+        a = np.ascontiguousarray(g[k], dtype=np.float32)
+        a.tofile(out / (k + ".bin"))
     for s in range(4):
-        xy = getattr(model.encoder.gaussian_head, f"gs_xy_{s}_0")
-        a = np.ascontiguousarray(xy.float().cpu().numpy(), dtype=np.float32)
-        assert tuple(a.shape) == EXPECTED[f"xy_s{s}"], (s, a.shape)
-        a.tofile(out / f"xy_s{s}.bin")
-        shapes[f"xy_s{s}"] = np.array(EXPECTED[f"xy_s{s}"])
-    np.savez(out / "shapes.npz", **shapes)
+        gh = model.encoder.gaussian_head
+        xy = getattr(gh, f"gs_xy_{s}_0")
+        a = xy.cpu().numpy()
+        if xy.dtype != torch.float32:
+            a = a.astype(np.float32)
+        a = np.ascontiguousarray(a)
+        assert tuple(a.shape) == EXPECTED[f"xy_s{s}"]
+        a.tofile(out / (f"xy_s{s}" + ".bin"))
+    np.savez(out / "shapes.npz", **{
+        "image": np.array((1, 2, 3, 512, 1024)),
+        "mono_image": np.array((1, 2, 3, 512, 1024)),
+        "cube_image": np.array((1, 2, 3, 256, 1536)),
+        "extrinsics": np.array((1, 2, 4, 4)),
+        "near": np.array((1, 2)),
+        "far": np.array((1, 2)),
+        "xy_s0": np.array((5215, 2)),
+        "xy_s1": np.array((20860, 2)),
+        "xy_s2": np.array((83443, 2)),
+        "xy_s3": np.array((333772, 2))})
     print("runner inputs ->", out)
-    for k, v in shapes.items():
-        print(" ", k, list(v))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

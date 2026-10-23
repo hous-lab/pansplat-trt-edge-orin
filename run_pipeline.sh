@@ -34,9 +34,10 @@ mkdir -p "$OKDIR" export/scratch
 # ---- step 2: runner inputs -----------------------------------------------
 log "step 2/8 runner inputs"
 if [ ! -f "$OKDIR/02_inputs" ]; then
-  # golden_512.npz is only consumed by the golden tier; the synthetic tier is
-  # dataset-free and must not depend on the torch trace (dump_golden needs the
-  # checkpoint and the full torch env). Produce it on demand, golden tier only.
+  # golden_512.npz anchors the golden tier: fetch it from the Hugging Face
+  # repo, or produce it from a preprocessed MP3D scene (dump_golden.py).
+  # The smoke tier skips the npz but still needs the checkpoint (xy grids
+  # are gaussian-head model state, not scene data).
   if [ "${PANSPLAT_INPUTS:-synth}" = "golden" ] && [ ! -f export/golden_512.npz ]; then
     echo "producing export/golden_512.npz (torch trace scene)"
     python3 scripts/dump_golden.py $OVERRIDES
@@ -110,9 +111,11 @@ if [ ! -f "$OKDIR/06_gates" ]; then
       export/scratch/golden_run.harm.f32 \
       export/scratch/golden_run.opa.f32
   else
-    echo "synthetic tier: self-anchored gate (runner dump vs torch chain, identical inputs)"
+    echo "smoke tier: structural gate only - the chain bakes the golden"
+    echo "scene encoding (see docs/05_accuracy.md); numerical validation ="
+    echo "golden tier (PANSPLAT_INPUTS=golden)"
     ./runner export/runner_bins export/engines/$PLAT_DIR export/scratch/synth_run
-    python3 scripts/verify_synth_gate.py export/scratch/synth_run
+    python3 scripts/verify_smoke.py export/scratch/synth_run
   fi
   touch "$OKDIR/06_gates"
 fi
@@ -145,7 +148,9 @@ echo "  Orin AGX 64GB (JetPack 6.2, TRT 10.3, MAXN): reconstruction 546.3-551.2 
 echo "  render (6x256^2 cubemap -> ERP):             20.6 ms"
 echo "  end-to-end:                                  ~567 ms"
 echo "  accuracy (golden tier): cos >= 0.99978, render PSNR 52.95 dB"
-echo "  accuracy (synth tier, self-anchored):        cos >= 0.9997"
+echo "  smoke tier (default): structural gate only - the chain bakes"
+echo "    the golden scene; accuracy gate = golden tier: cos >= 0.99978,"
+echo "    render PSNR ~52.95 dB (PANSPLAT_INPUTS=golden)"
 echo "artifacts: export/onnx (21), export/engines/$PLAT_DIR (21), cxx binaries"
 touch "$OKDIR/08_banner"
 echo "ALL DONE"

@@ -35,6 +35,20 @@ Each split was profile-driven. Myelin (TRT's graph compiler) failed systematical
 
 Each fix defines an engine boundary — **segment granularity = compiler pathology granularity**. Evolution: 1 monolith → 5 coarse graphs → 9 fine → 13 engines + 5 kernels → 21 engines + 5 kernels (flash attention splits, −29 ms). 4 legacy graphs (cv_post1/2, gh_stage0/1) remain on disk for provenance but are not loaded.
 
+## Scene locking (feature-cache design)
+
+This is a single-scene deployment, and the lock is explicit in the
+runner: `cxx/runner.cu` binds no features/raw_correlation/image inputs
+to the gh_s*_cnn engines - those tensors are graph constants inside the
+engines (gh_s0_cnn takes no runtime inputs at all) - and the gh_s*_mlp
+engines bake the checkpoint's xy sampling grids as engine constants.
+What varies at runtime: disp_candi (the cost-volume path, from the input
+images), last_raw (the s1-s3 residual chain), and the xy grids on the
+adapter kernels (runner input bins). Consequence for validation:
+numerical gates run on the golden-anchor tier (anchor npz + checkpoint
+xy, docs/05_accuracy.md); the smoke tier is structural-only.
+
+
 ## 31-segment chain (Orin segment table, representative)
 
 | Segments | ms | Note |
