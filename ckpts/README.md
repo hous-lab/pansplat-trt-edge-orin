@@ -22,7 +22,7 @@ sha256sum logs/nvpl49ge/checkpoints/last.ckpt
 # expect 3b060c29b70a1fbda5f96efa94a75cd1fd70f8d2a5820dd9df06a36f0f8241ee
 ```
 
-The pipeline guard (step 1 of `run_pipeline.sh`) fails fast with this pointer
+The pipeline guard (step 1 of [run_pipeline.sh](../run_pipeline.sh)) fails fast with this pointer
 when the checkpoint is missing.
 
 ## Other upstream checkpoints (not used by this pipeline)

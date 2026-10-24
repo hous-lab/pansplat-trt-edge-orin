@@ -9,12 +9,12 @@ verbatim; the repository's MIT license does not extend to them.
 - **Upstream**: https://github.com/dcharatan/diff-gaussian-rasterization-modified
 - **Snapshot**: upstream commit `1250c42` ("Note about new and improved modifications")
 - **License**: the Gaussian-Splatting License (Inria/MPII, research use, see
-  `diff-gaussian-rasterization-modified/LICENSE.md` inside the vendored copy —
+  [diff-gaussian-rasterization-modified/LICENSE.md](diff-gaussian-rasterization-modified/LICENSE.md) inside the vendored copy —
   the rasterizer derives from graphdeco-inria/gaussian-splatting, so the
   vendored directory is **not** MIT and commercial use of the rasterizer
   component requires contacting Inria.
-- **Why vendored**: the deployment runner (cxx/runner.cu) links the rasterizer
-  for the rendering benchmarks (render_bench.cu / render_matrix.cu) and for the
+- **Why vendored**: the deployment runner ([cxx/runner.cu](../cxx/runner.cu)) links the rasterizer
+  for the rendering benchmarks ([render_bench.cu](../cxx/render_bench.cu) / [render_matrix.cu](../cxx/render_matrix.cu)) and for the
   PyTorch-side comparison paths; a fresh clone needs it to build cxx/ targets
   that rasterize.
 - **Changes**: none. The vendored copy is a plain snapshot; the upstream

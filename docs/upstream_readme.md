@@ -261,7 +261,7 @@ python -m src.main +experiment=pansplat-512-360loc ++model.weights_path=logs/l8l
 python -m src.main +experiment=mvsplat-512-360loc ++model.weights_path=logs/3q5jp96j/checkpoints/last.ckpt mode=test test.compute_scores=true wandb.name=test_mvsplat dataset=insta360
 ```
 
-You can download the [checkpoints](https://monashuni-my.sharepoint.com/personal/cheng_zhang_monash_edu/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fcheng%5Fzhang%5Fmonash%5Fedu%2FDocuments%2Fprojects%2FPanSplat%2Fshare%2Flogs&ga=1) or use your own checkpoints from [Fine-tune on 360Loc](#fine-tune-on-360loc) and [MVSplat Baseline](#mvsplat-baseline) sections. For PanSplat without deferred blending, please follow [Fine-tune on 360Loc](#fine-tune-on-360loc) with the `model.encoder.gaussian_head.deferred_blend=false` parameter to train the model. Don't forget to update the experiment `id` in `src/paper/frame_vs_metric.py` if you are using your own checkpoints.
+You can download the [checkpoints](https://monashuni-my.sharepoint.com/personal/cheng_zhang_monash_edu/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fcheng%5Fzhang%5Fmonash%5Fedu%2FDocuments%2Fprojects%2FPanSplat%2Fshare%2Flogs&ga=1) or use your own checkpoints from [Fine-tune on 360Loc](#fine-tune-on-360loc) and [MVSplat Baseline](#mvsplat-baseline) sections. For PanSplat without deferred blending, please follow [Fine-tune on 360Loc](#fine-tune-on-360loc) with the `model.encoder.gaussian_head.deferred_blend=false` parameter to train the model. Don't forget to update the experiment `id` in [src/paper/frame_vs_metric.py](../src/paper/frame_vs_metric.py) if you are using your own checkpoints.
 
 Finally, you can run the following command to draw the figure:
 

@@ -209,3 +209,6 @@ export/scratch/
 .omc/
 exp_*/
 logs/
+
+# local debug helper
+scripts/dump_ref.py

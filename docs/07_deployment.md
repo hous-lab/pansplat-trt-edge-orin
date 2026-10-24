@@ -2,7 +2,7 @@
 
 ## Platform pairing
 
-`scripts/detect_platform.py` names the engine directory by architecture + TensorRT version (e.g. `x86-trt10.4`). Engines are not portable across pairings and the name prevents silent reuse: build per platform, keep per-platform directories separate. Pairings measured for this contract: Orin AGX (sm_87, TRT 10.3), A6000 (sm_86, TRT 10.16), 4090 Laptop dev host (sm_89/x86, TRT 10.4).
+[scripts/detect_platform.py](../scripts/detect_platform.py) names the engine directory by architecture + TensorRT version (e.g. `x86-trt10.4`). Engines are not portable across pairings and the name prevents silent reuse: build per platform, keep per-platform directories separate. Pairings measured for this contract: Orin AGX (sm_87, TRT 10.3), A6000 (sm_86, TRT 10.16), 4090 Laptop dev host (sm_89/x86, TRT 10.4).
 
 ## Orin
 
@@ -12,11 +12,11 @@ nvpmodel -m 0 && jetson_clocks   # MAXN
 PANSPLAT_INPUTS=golden bash run_pipeline.sh   # accuracy gate; smoke is default
 ```
 
-Orin's 64 GB host RAM builds all 21 engines locally, including the gh_s3 pair. Follow docs/03 discipline for any number you publish.
+Orin's 64 GB host RAM builds all 21 engines locally, including the gh_s3 pair. Follow [docs/03_benchmark_contract.md](03_benchmark_contract.md) discipline for any number you publish.
 
 ## x86 with dGPU
 
-- Python env: `environment_strict.yaml` (python 3.10.16, torch 2.4.0+cu118, TRT 10.x with trtexec on PATH)
+- Python env: [environment_strict.yaml](../environment_strict.yaml) (python 3.10.16, torch 2.4.0+cu118, TRT 10.x with trtexec on PATH)
 - The gh_s3 pair needs ~41 GB free RAM during trtexec (Myelin workspace). Step 4 hard-guards this; on small-RAM hosts it tells you to build on a big-RAM host and copy engines into `export/engines/<platform>/`.
 - x86 engines are x86-only — Orin builds its own from the same ONNX.
 

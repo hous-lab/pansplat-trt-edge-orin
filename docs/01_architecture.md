@@ -38,7 +38,7 @@ Each fix defines an engine boundary — **segment granularity = compiler patholo
 ## Scene locking (feature-cache design)
 
 This is a single-scene deployment, and the lock is explicit in the
-runner: `cxx/runner.cu` binds no features/raw_correlation/image inputs
+runner: [cxx/runner.cu](../cxx/runner.cu) binds no features/raw_correlation/image inputs
 to the gh_s*_cnn engines - those tensors are graph constants inside the
 engines (gh_s0_cnn takes no runtime inputs at all) - and the gh_s*_mlp
 engines bake the checkpoint's xy sampling grids as engine constants.
@@ -46,7 +46,7 @@ What varies at runtime: disp_candi (the cost-volume path, from the input
 images), last_raw (the s1-s3 residual chain), and the xy grids on the
 adapter kernels (runner input bins). Consequence for validation:
 numerical gates run on the golden-anchor tier (anchor npz + checkpoint
-xy, docs/05_accuracy.md); the smoke tier is structural-only.
+xy, [docs/05_accuracy.md](05_accuracy.md)); the smoke tier is structural-only.
 
 
 ## 31-segment chain (Orin segment table, representative)
@@ -59,7 +59,7 @@ xy, docs/05_accuracy.md); the smoke tier is structural-only.
 | cv_post0-2 | 109.2 | refine + depth head; flash splits landed inside cv_post2 |
 | s0 (cnn+mlp+ada) | 4.5 | |
 | s1 | 17.7 | |
-| s2_cnn | 46.2 | INT8 candidate segment (dropped, see docs/08) |
+| s2_cnn | 46.2 | INT8 candidate segment (dropped, see [docs/08_results.md](08_results.md)) |
 | s2_mlp+ada | 15.3 | |
 | s3_cnn | **178.1** | largest single segment |
 | s3_mlp+ada | 67.1 | s3_mlp fusion recipe on file (−5 ms, deferred) |
@@ -71,4 +71,4 @@ xy, docs/05_accuracy.md); the smoke tier is structural-only.
 - Explicit buffer table (name → elements, fp32 unless `h` suffix = fp16); same-name outputs bound explicitly (`bind_out_as`) so the three disp_candi tensors don't collide.
 - **fp16 in, fp32 math**: dtype convergence at boundaries via two cast kernels.
 - Kernel host = graph splitting + bare kernel launches (not IPluginV3): the ada/flash kernels already sit at engine boundaries, so the runner launches them directly.
-- Host-side state: `struct Eng` (engine wrapper), `load_engine`, `bind_io`, `bind_out_as`, `main` in `cxx/runner.cu`.
+- Host-side state: `struct Eng` (engine wrapper), `load_engine`, `bind_io`, `bind_out_as`, `main` in [cxx/runner.cu](../cxx/runner.cu).

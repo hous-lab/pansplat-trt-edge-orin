@@ -56,12 +56,12 @@ The pipeline is 8 idempotent steps with `export/.ok/` sentinels: guard → runne
 
 ## Repository Map
 
-- `cxx/` — GPU-resident runner (~40 KB single-file C++/CUDA) + 5 kernel classes + `Makefile` (single nvcc, no torch dependency)
-- `scripts/` — export chain, manifest tooling, gates, benches
-- `src/` — deployment-side model surgery (segment wrappers: `mvs_split.py`, `gh_split.py`, Rodrigues real SH rotation, SDPA backend, SE(3) closed-form inverse)
-- `export/` — regenerable artifacts (ONNX, engines, runner inputs, gates); see `export/README.md`
-- `third_party/diff-gaussian-rasterization-modified/` — forked rasterizer (vendored, MIT, see NOTICE)
+- [cxx/](cxx) — GPU-resident runner (~40 KB single-file C++/CUDA) + 5 kernel classes + `Makefile` (single nvcc, no torch dependency)
+- [scripts/](scripts) — export chain, manifest tooling, gates, benches
+- [src/](src) — deployment-side model surgery (segment wrappers: [mvs_split.py](src/model/encoder/mvs_split.py), [gh_split.py](src/model/encoder/gh_split.py), Rodrigues real SH rotation, SDPA backend, SE(3) closed-form inverse)
+- [export/](export) — regenerable artifacts (ONNX, engines, runner inputs, gates); see [export/README.md](export/README.md)
+- [third_party/diff-gaussian-rasterization-modified/](third_party/diff-gaussian-rasterization-modified) — forked rasterizer (vendored, MIT, see NOTICE)
 
 ## License
 
-MIT for this deployment code; PanSplat model code © Cheng Zhang, MIT; the vendored rasterizer fork carries its own license — see [NOTICE](NOTICE). The PanSplat checkpoints remain under their original license and are link-only (see `ckpts/README.md`).
+MIT for this deployment code; PanSplat model code © Cheng Zhang, MIT; the vendored rasterizer fork carries its own license — see [NOTICE](NOTICE). The PanSplat checkpoints remain under their original license and are link-only (see [ckpts/README.md](ckpts/README.md)).
