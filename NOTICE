@@ -5,6 +5,7 @@ each component keeps its original license.
 |---|---|---|---|
 | PanSplat (src/, config/) | [chengzhag/PanSplat](https://github.com/chengzhag/PanSplat) | MIT | Upstream of this fork; CVPR 2025, "PanSplat: 4K Panorama Splatting with Feed-Forward Gaussians" (Zhang & Funkhouser) |
 | diff-gaussian-rasterization-modified (third_party/) | [dcharatan/diff-gaussian-rasterization-modified](https://github.com/dcharatan/diff-gaussian-rasterization-modified) | Gaussian-Splatting License (Inria/MPII) | Vendored snapshot of upstream commit 1250c42; **research use only** - the rasterizer derives from graphdeco-inria/gaussian-splatting |
+| glm math library (vendored under third_party/diff-gaussian-rasterization-modified/third_party/glm/) | [g-truc/glm](https://github.com/g-truc/glm) | MIT | Math library vendored inside the rasterizer fork; keeps its own license headers |
 | UniMatch backbone modules (src/.../unimatch/) | [autonomousvision/unimatch](https://github.com/autonomousvision/unimatch) | carried via PanSplat (MIT) | Adopted by PanSplat upstream |
 | UniFuse fusion networks (src/.../unifuse/) | [UniFuse](https://github.com/jinlinyi/UniFuse) | carried via PanSplat (MIT) | UniFuse itself borrows from py360convert, BiFuse, SENet - attribution inherited |
 

@@ -2,21 +2,39 @@
 
 Real-time feed-forward panoramic 3D Gaussian Splatting on Jetson AGX Orin.
 
+**Status: Active.** Results last verified 2026-10 on Jetson AGX Orin 64GB (JetPack 6.2, TensorRT 10.3), RTX A6000 (TensorRT 10.16) and a 4090 dev host (TensorRT 10.4, equivalence cross-checks). Issues and PRs welcome.
+
 [PanSplat](https://github.com/chengzhag/PanSplat) (CVPR 2025) reconstructs a 3D Gaussian scene from two 512×1024 ERP images in a single forward pass. The stock PyTorch pipeline takes ~30 s per frame on Orin — this project deploys it as **21 TensorRT FP16 engines plus 5 custom CUDA kernel classes (41 kernel launches) forming a 31-segment GPU-resident chain**, and cuts end-to-end latency to **~567 ms** with no measurable quality loss.
 
 ## Results
 
-Measured on Jetson AGX Orin 64GB (JetPack 6.2, TensorRT 10.3, MAXN, quiet window). Full measurement contract: [docs/03_benchmark_contract.md](docs/03_benchmark_contract.md).
+Two latency calibers are reported separately and never mixed: the chain caliber (model-inference only) and the end-to-end caliber (chain + rendering). Full measurement contract: [docs/03_benchmark_contract.md](docs/03_benchmark_contract.md).
+
+**Chain latency (model-inference)** - Jetson AGX Orin 64GB, JetPack 6.2, TensorRT 10.3, MAXN + live clock readback (GR3D 1300.5 MHz), quiet window, 3 untimed warmup iterations then min/mean of N≥5 (2026-10 release re-run: N=50):
 
 | Metric | Value |
 |---|---|
-| Reconstruction (2×512×1024 ERP → 886,580 Gaussians × 88 dims) | **546.3–551.2 ms** |
+| Reconstruction (2×512×1024 ERP → 886,580 Gaussians × 88 dims) | **546.3–551.2 ms** (min / mean) |
+| 2026-10 release re-run (quiet cool window, 99% util) | 555.1 ms min / 556.4 ms mean (N=50), repeat 555.1–561.0 |
 | Rendering (886,580 Gaussians → 6×256² cubemap → 512×1024 ERP) | 20.6 ms |
-| End-to-end | **~567 ms** (53.7× vs PyTorch eager) |
-| Gaussian fields cosine vs PyTorch golden (means/cov/harmonics/opacity) | ≥ 0.99978 |
-| Render PSNR vs PyTorch golden render | 52.95 dB (golden 52.96 dB) |
+| RTX A6000 recon (TRT 10.16, shared card) | 129.97 ms (±10%) |
+
+**End-to-end & platform overhead**:
+
+| Metric | Value |
+|---|---|
+| End-to-end (chain + render summed) | **~567 ms** |
+| vs PyTorch eager on the same Orin (30,000 ms) | 53.7× |
+| H2D/D2H (measured separately, excluded from e2e) | 6–13 ms |
 | Cold start (to first frame, separate from steady state) | 3.1–3.6 s |
-| RTX A6000 (TRT 10.16) reconstruction | 129.97 ms |
+
+**Accuracy gates (golden-anchor tier)**:
+
+| Metric | Value |
+|---|---|
+| Gaussian fields cosine vs PyTorch golden (means/cov/harmonics/opacity) | ≥ 0.99978 per field |
+| Render PSNR vs PyTorch golden render (same-env A/B) | 52.95 dB (golden 52.96 dB) |
+| 2026-10 clean-room golden gate (A6000 / 4090 dev) | 4-field cosine PASS, render PSNR 53.22 / 53.15 dB (floor 52.0) |
 
 ## Architecture
 
@@ -60,7 +78,14 @@ The pipeline is 8 idempotent steps with `export/.ok/` sentinels: guard → runne
 - [scripts/](scripts) — export chain, manifest tooling, gates, benches
 - [src/](src) — deployment-side model surgery (segment wrappers: [mvs_split.py](src/model/encoder/mvs_split.py), [gh_split.py](src/model/encoder/gh_split.py), Rodrigues real SH rotation, SDPA backend, SE(3) closed-form inverse)
 - [export/](export) — regenerable artifacts (ONNX, engines, runner inputs, gates); see [export/README.md](export/README.md)
-- [third_party/diff-gaussian-rasterization-modified/](third_party/diff-gaussian-rasterization-modified) — forked rasterizer (vendored, MIT, see NOTICE)
+- [third_party/diff-gaussian-rasterization-modified/](third_party/diff-gaussian-rasterization-modified) — forked rasterizer (vendored, Inria/MPII non-commercial research license - see [NOTICE](NOTICE) and [third_party/VENDORED.md](third_party/VENDORED.md))
+
+## Scope & limitations
+
+- Single-scene feature-cache deployment: the gh_s*_cnn engines bake the golden-scene encoding, so numerical gates run on the golden-anchor tier ([docs/05_accuracy.md](docs/05_accuracy.md)); non-golden inputs are smoke-tier only.
+- Not solved here: INT8 (three documented strikes, [docs/08_results.md](docs/08_results.md)), cold start (3.1–3.6 s, untreated), interactive viewing (the render bench is a benchmark binary, not a viewer), DLA.
+- Conclusions are bound to the platform pairings in [docs/07_deployment.md](docs/07_deployment.md); engines are not portable across TRT versions or GPU architectures.
+- The 256-res tier latency was measured (A6000 ~79 ms) but quality was never evaluated - decision data missing, tier frozen.
 
 ## License
 
