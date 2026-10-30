@@ -4,7 +4,7 @@ Statement types: measured numbers are FACT (this config, this device/versions); 
 
 ## Milestone chain (Orin, chain-only latency)
 
-30,000 ms (torch eager) → 1,693 (9-graph file chain + Rodrigues) → 1,007 (GPU-resident runner + adapter kernel) → 645 (CV kernel inline) → 587.8 (gh01 split) → **558.9 (flash attention splits) ms**. Rendering adds 20.6 ms → e2e ~567 ms.
+30,000 ms (torch eager) → 1,693 (9-graph file chain + Rodrigues) → 1,007 (GPU-resident runner + adapter kernel) → 645 (CV kernel inline) → 587.8 (gh01 split) → **558.9 (flash attention splits) ms**. Rendering adds 20.6 ms → e2e ~567 ms. Ratios against the eager baseline: 53.7× chain caliber (30,000/558.9), 52.9× end-to-end (30,000/567).
 
 Each step was adopted on measured wins after equivalence held; each rejection also had a reason (INT8: three documented strikes — see below).
 
