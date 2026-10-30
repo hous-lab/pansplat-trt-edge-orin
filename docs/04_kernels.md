@@ -20,6 +20,13 @@ The upstream cost volume builds grid_sample + correlation as a pointwise graph �
 
 Each gaussian-head stage ends in an adapter: small GEMMs (K=3) + quaternion → rotation + Rodrigues SH rotation. In the fused TRT graph these fp32 small-GEMM chains landed on FFMA + trig instruction chains. The custom kernel keeps the chain in registers: `apply_e`, `quat_to_R`, `ada_kernel`. Torch cross-check: [cxx/ada_chain_torch.cu](../cxx/ada_chain_torch.cu) + [scripts/test_ada_kernel.py](../scripts/test_ada_kernel.py).
 
+<p align="center">
+  <img src="../assets/benchmarks/kernel_speedups.png" width="880" alt="kernel speedups">
+</p>
+
+*Standalone benches (log scale), fused TRT graph vs custom CUDA kernel. Standalone caliber only: in-chain the CV kernel segment is 43.7 ms (docs/01 segment table); flash has no standalone bench (chain-wide −29 ms). Figure generated from the docs/04 records (drift-asserted maintainer-side script); no new numbers.*
+
+
 ## Flash attention
 
 Two attention segments (cv_post1: H=2/S=4096/D=32; cv_post2: H=1/S=16384/D=32) materialized attention scores at 16384² fp16 — 537 MB per block, 4× DRAM round-trips. The custom flash kernel (`mma.m16n8k16` tensor-core fragments, online softmax) avoids materialization. Splitting: each graph's 3 attention blocks → a/m1/m2/b engine segments around the kernel boundary. Predicted −41 ms, measured −29 ms — the gap drove the segment table audit.

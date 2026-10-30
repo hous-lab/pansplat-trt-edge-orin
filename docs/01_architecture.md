@@ -65,7 +65,12 @@ xy, [docs/05_accuracy.md](05_accuracy.md)); the smoke tier is structural-only.
 | s3_mlp+ada | 67.1 | s3_mlp fusion recipe on file (−5 ms, deferred) |
 | concat | 0.3 | offset writes |
 
-## Runtime shape
+<p align="center">
+  <img src="../assets/benchmarks/waterfall.png" width="880" alt="segment waterfall">
+</p>
+
+*Segment waterfall of the 587.8 ms-era chain (pre-flash-splits; rows sum 587.4 ms by rounding), log x-axis. Segment boundaries are those of the audited 31-segment layout (table above); the current release caliber 546.3–551.2 ms is the docs/08 record after the flash splits. Figure generated from the table above (drift-asserted maintainer-side script); no new numbers.*
+
 
 - **GPU-resident, zero-file chain**: engine-to-engine tensors stay on device; no trtexec-style JSON file handoff (1693 → 1007 ms when introduced).
 - Explicit buffer table (name → elements, fp32 unless `h` suffix = fp16); same-name outputs bound explicitly (`bind_out_as`) so the three disp_candi tensors don't collide.

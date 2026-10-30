@@ -1,14 +1,32 @@
 # PanSplat TRT Edge — Jetson AGX Orin Deployment
 
-Real-time feed-forward panoramic 3D Gaussian Splatting on Jetson AGX Orin.
+[PanSplat](https://github.com/chengzhag/PanSplat) (CVPR 2025) reconstructs a 3D Gaussian scene from two 512×1024 ERP panoramas in a single forward pass. On Jetson AGX Orin the stock PyTorch pipeline takes ~30 s per frame; deployed here as a 21-engine TensorRT chain it runs at **~567 ms end-to-end** — 53.7× over the same board’s eager baseline (chain-caliber ratio) — with no measurable quality loss (render PSNR 52.95 dB vs golden 52.96 dB). The star sub-result: replacing the fused cost-volume graph with one CUDA kernel alone recovers 320 ms (364.3 → 24.5 ms standalone, 14.8×).
 
-**Status: Active.** Results last verified 2026-10 on Jetson AGX Orin 64GB (JetPack 6.2, TensorRT 10.3), RTX A6000 (TensorRT 10.16) and a 4090 dev host (TensorRT 10.4, equivalence cross-checks). Issues and PRs welcome.
+<p align="center">
+  <img src="assets/pipeline.png" width="880" alt="deployed pipeline">
+</p>
 
-[PanSplat](https://github.com/chengzhag/PanSplat) (CVPR 2025) reconstructs a 3D Gaussian scene from two 512×1024 ERP images in a single forward pass. The stock PyTorch pipeline takes ~30 s per frame on Orin — this project deploys it as **21 TensorRT FP16 engines plus 5 custom CUDA kernel classes (41 kernel launches) forming a 31-segment GPU-resident chain**, and cuts end-to-end latency to **~567 ms** with no measurable quality loss.
+*The deployed one-pass pipeline: what runs on the Orin in one forward pass. Engine group counts from the committed engine manifest (cxx/runner.cu); layout figure generated from committed records, no measurement data. Engine-internal math stays FP32 (docs/01).*
+
+## Demo
+
+**360° sweep of the deployed chain's panorama render.** The video master ships as a Release asset on v1.1.0 (render_sweep.mp4, 10 s H.264, 1024×512); the contact sheet below is the in-repo fallback. A yaw sweep at a fixed position equals an exact horizontal roll of the ERP image, so the sweep rolls the certified render - no re-render, no new numbers.
+
+<p align="center">
+  <img src="assets/demos/render_sweep_poster.png" width="880" alt="360 sweep contact sheet">
+</p>
+
+*Golden-scene panorama, deployed-chain render (512×1024 ERP, mp3d-derived scene distributed with the HF artifacts repo). Render pair certified at the dev gate (docs/08, 4090 dev, 2026-10).*
 
 ## Results
 
-Two latency calibers are reported separately and never mixed: the chain caliber (model-inference only) and the end-to-end caliber (chain + rendering). Full measurement contract: [docs/03_benchmark_contract.md](docs/03_benchmark_contract.md).
+Two latency calibers are reported separately and never mixed: the chain caliber (model-inference only) and the end-to-end caliber (chain + rendering). Headline subset only - the full records and the evidence chain live in [docs/08_results.md](docs/08_results.md); the measurement contract (platform, warmup/iteration policy, metadata block) in [docs/03_benchmark_contract.md](docs/03_benchmark_contract.md).
+
+<p align="center">
+  <img src="assets/task_io.png" width="880" alt="one transaction">
+</p>
+
+*One transaction of the deployed chain: two input ERP views (left) → Gaussian field → rendered panorama (right). Golden-scene tier (mp3d-derived scene, anchor npz on the HF artifacts repo); right panel is the deployed-chain render certified at the dev gate (docs/08, 4090 dev, 2026-10). Single forward pass, no measurement data in this figure.*
 
 **Chain latency (model-inference)** - Jetson AGX Orin 64GB, JetPack 6.2, TensorRT 10.3, MAXN + live clock readback (GR3D 1300.5 MHz), quiet window, 3 untimed warmup iterations then min/mean of N≥5 (2026-10 release re-run: N=50):
 
@@ -17,6 +35,7 @@ Two latency calibers are reported separately and never mixed: the chain caliber 
 | Reconstruction (2×512×1024 ERP → 886,580 Gaussians × 88 dims) | **546.3–551.2 ms** (min / mean) |
 | 2026-10 release re-run (quiet cool window, 99% util) | 555.1 ms min / 556.4 ms mean (N=50), repeat 555.1–561.0 |
 | Rendering (886,580 Gaussians → 6×256² cubemap → 512×1024 ERP) | 20.6 ms |
+| vs PyTorch eager on the same Orin (30,000 ms, chain caliber) | **53.7×** (52.9× end-to-end) |
 | RTX A6000 recon (TRT 10.16, shared card) | 129.97 ms (±10%) |
 
 **End-to-end & platform overhead**:
@@ -24,9 +43,6 @@ Two latency calibers are reported separately and never mixed: the chain caliber 
 | Metric | Value |
 |---|---|
 | End-to-end (chain + render summed) | **~567 ms** |
-| vs PyTorch eager on the same Orin (30,000 ms) | 53.7× |
-| H2D/D2H (measured separately, excluded from e2e) | 6–13 ms |
-| Cold start (to first frame, separate from steady state) | 3.1–3.6 s |
 
 **Accuracy gates (golden-anchor tier)**:
 
@@ -36,18 +52,15 @@ Two latency calibers are reported separately and never mixed: the chain caliber 
 | Render PSNR vs PyTorch golden render (same-env A/B) | 52.95 dB (golden 52.96 dB) |
 | 2026-10 clean-room golden gate (A6000 / 4090 dev) | 4-field cosine PASS, render PSNR 53.22 / 53.15 dB (floor 52.0) |
 
+<p align="center">
+  <img src="assets/render_pair.png" width="880" alt="render quality pair">
+</p>
+
+*Deployed-chain render vs PyTorch golden render, same Gaussians: left/middle near-identical, right = amplified |diff| (×20 grayscale). The PSNR annotation cites the committed docs/08 record (4090 dev gate, 2026-10); the Orin release round measured 52.95 dB (table above). PNG round-trip changes the number - the figure cites the record, not a recompute.*
+
 ## Architecture
 
-The 2-view encoder (MVS backbone + cost volumes + 4-stage gaussian head) traces to 23 ONNX graphs; 21 engines are loaded at runtime:
-
-- 1× `mvs_pre` (backbone + mono fusion)
-- 7× cost-volume cascade (`cv_pre0-2` + CV-kernel inline + `cv_post0-2` split)
-- 8× 4-stage gaussian head (`gh_s{0-3}_{cnn,mlp}`)
-- 4+4× attention splits (`p1_`/`p2_`) around two custom flash-attention kernels (H=2/S=4096/D=32 and H=1/S=16384/D=32)
-
-The 5 custom kernel classes replace graph segments where TensorRT's Myelin compiler systematically fails (see [docs/04_kernels.md](docs/04_kernels.md)): cost volume (70× off the bandwidth roofline as fused graph), adapter chain (fp32 K=3 GEMMs on FFMA+trig chains, 32× speedup), flash attention (avoid materializing 16384² fp16 scores), boundary dtype casts, and a torch-free render bench (direct-call of the forked rasterizer, 20.6 ms).
-
-Engine-internal math stays FP32; engines take FP16 inputs. Segment table, equivalence method, and the full audit trail: [docs/01_architecture.md](docs/01_architecture.md), [docs/05_accuracy.md](docs/05_accuracy.md), [docs/08_results.md](docs/08_results.md).
+The 2-view encoder traces to 23 ONNX graphs; 21 engines load at runtime: 1× mvs_pre (backbone + mono fusion), 12× cost-volume cascade (3 stages; the stage-1/2 refinements are split into attention engines around two custom flash-attention kernels), 8× gaussian head (4 stages × cnn+mlp). Segment boundaries follow compiler pathologies; engine-internal math stays FP32 while engines take FP16 inputs. Full segment table, engine-boundary reasoning, buffer-table design: [docs/01_architecture.md](docs/01_architecture.md). Kernel methodology and the Myelin pathology classification: [docs/04_kernels.md](docs/04_kernels.md). Feature-cache tier semantics for validation: [docs/05_accuracy.md](docs/05_accuracy.md).
 
 ## Quickstart
 
@@ -72,20 +85,13 @@ bash run_pipeline.sh
 
 The pipeline is 8 idempotent steps with `export/.ok/` sentinels: guard → runner inputs → ONNX export (23 graphs) → 21 trtexec engine builds → CUDA runner build → accuracy gates → latency bench → summary. `PANSPLAT_SKIP_EXPORT=1` validates HF-fetched ONNX against the manifest and skips tracing — see [docs/02_pipeline.md](docs/02_pipeline.md).
 
-## Repository Map
-
-- [cxx/](cxx) — GPU-resident runner (~40 KB single-file C++/CUDA) + 5 kernel classes + `Makefile` (single nvcc, no torch dependency)
-- [scripts/](scripts) — export chain, manifest tooling, gates, benches
-- [src/](src) — deployment-side model surgery (segment wrappers: [mvs_split.py](src/model/encoder/mvs_split.py), [gh_split.py](src/model/encoder/gh_split.py), Rodrigues real SH rotation, SDPA backend, SE(3) closed-form inverse)
-- [export/](export) — regenerable artifacts (ONNX, engines, runner inputs, gates); see [export/README.md](export/README.md)
-- [third_party/diff-gaussian-rasterization-modified/](third_party/diff-gaussian-rasterization-modified) — forked rasterizer (vendored, Inria/MPII non-commercial research license - see [NOTICE](NOTICE) and [third_party/VENDORED.md](third_party/VENDORED.md))
-
 ## Scope & limitations
 
 - Single-scene feature-cache deployment: the gh_s*_cnn engines bake the golden-scene encoding, so numerical gates run on the golden-anchor tier ([docs/05_accuracy.md](docs/05_accuracy.md)); non-golden inputs are smoke-tier only.
 - Not solved here: INT8 (three documented strikes, [docs/08_results.md](docs/08_results.md)), cold start (3.1–3.6 s, untreated), interactive viewing (the render bench is a benchmark binary, not a viewer), DLA.
 - Conclusions are bound to the platform pairings in [docs/07_deployment.md](docs/07_deployment.md); engines are not portable across TRT versions or GPU architectures.
 - The 256-res tier latency was measured (A6000 ~79 ms) but quality was never evaluated - decision data missing, tier frozen.
+- Rendering envelope and the tile-parallelism floor: [docs/09_rendering.md](docs/09_rendering.md).
 
 ## License
 
