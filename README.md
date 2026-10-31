@@ -1,6 +1,6 @@
 # PanSplat TRT Edge — Jetson AGX Orin Deployment
 
-[PanSplat](https://github.com/chengzhag/PanSplat) (CVPR 2025) reconstructs a 3D Gaussian scene from two 512×1024 ERP panoramas in a single forward pass. On Jetson AGX Orin the stock PyTorch pipeline takes ~30 s per frame; deployed here as a 21-engine TensorRT chain it runs at **~567 ms end-to-end** — 53.7× over the same board’s eager baseline (chain-caliber ratio) — with no measurable quality loss (render PSNR 52.95 dB vs golden 52.96 dB). The star sub-result: replacing the fused cost-volume graph with one CUDA kernel alone recovers 320 ms (364.3 → 24.5 ms standalone, 14.8×).
+We deployed [PanSplat](https://github.com/chengzhag/PanSplat)'s panoramic 3D Gaussian reconstruction on a Jetson AGX Orin as an edge deployment: two 512×1024 ERP views in, a rendered panorama out, **~567 ms end-to-end** — 53.7× the stock PyTorch pipeline on the same board (chain caliber; 52.9× end-to-end) at render PSNR 52.95 dB vs 52.96 dB golden. The build: a 21-engine TensorRT chain with FP32 engine-internal math, plus five hand-written CUDA kernel classes (41 launches) — the cost-volume kernel replaces the fused cost-volume graph at 364.3 → 24.5 ms standalone (14.8×), the largest single kernel win in the chain.
 
 <p align="center">
   <img src="assets/pipeline.png" width="880" alt="deployed pipeline">
