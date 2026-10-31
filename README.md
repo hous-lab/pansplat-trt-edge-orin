@@ -44,6 +44,18 @@ Two latency calibers are reported separately and never mixed: the chain caliber 
 | vs PyTorch eager on the same Orin (30,000 ms, chain caliber) | **53.7×** (52.9× end-to-end) |
 | RTX A6000 recon (TRT 10.16, shared card) | 129.97 ms (±10%) |
 
+<p align="center">
+  <img src="assets/benchmarks/waterfall.png" width="880" alt="segment waterfall">
+</p>
+
+*Where the half-second goes: per-segment time of the deployed chain (587.8 ms-era layout, pre-flash-splits; log scale). The release caliber 546.3–551.2 ms is after the flash splits — full 31-segment table and engine-boundary reasoning in [docs/01_architecture.md](docs/01_architecture.md).*
+
+<p align="center">
+  <img src="assets/benchmarks/kernel_speedups.png" width="880" alt="kernel speedups">
+</p>
+
+*What the custom kernels bought: standalone benches, fused TRT graph vs custom CUDA kernel (log scale). Standalone caliber only — in-chain the CV kernel segment is 43.7 ms; flash has no standalone bench. Kernel methodology and the Myelin pathology classification in [docs/04_kernels.md](docs/04_kernels.md).*
+
 **End-to-end & platform overhead**:
 
 | Metric | Value |
@@ -98,6 +110,12 @@ The pipeline is 8 idempotent steps with `export/.ok/` sentinels: guard → runne
 - Conclusions are bound to the platform pairings in [docs/07_deployment.md](docs/07_deployment.md); engines are not portable across TRT versions or GPU architectures.
 - The 256-res tier latency was measured (A6000 ~79 ms) but quality was never evaluated - decision data missing, tier frozen.
 - Rendering envelope and the tile-parallelism floor: [docs/09_rendering.md](docs/09_rendering.md).
+
+<p align="center">
+  <img src="assets/benchmarks/envelope.png" width="880" alt="rendering envelope">
+</p>
+
+*What a render costs anywhere: min ms per frame, 3 platforms × faces × resolution. The 128² tile-parallelism floor, phase decomposition, and knob studies in [docs/09_rendering.md](docs/09_rendering.md).*
 
 ## License
 
