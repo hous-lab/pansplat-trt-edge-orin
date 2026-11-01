@@ -12,9 +12,7 @@ We deployed [PanSplat](https://github.com/chengzhag/PanSplat)'s panoramic 3D Gau
 
 **360° sweep of the deployed chain's panorama render** (10 s, no audio):
 
-<p align="center">
-  <video src="https://github.com/user-attachments/assets/517c35b7-6e5b-4ed1-b57a-f380a3aef133" controls muted loop></video>
-</p>
+https://github.com/user-attachments/assets/517c35b7-6e5b-4ed1-b57a-f380a3aef133
 
 A yaw sweep at a fixed position equals an exact horizontal roll of the ERP image, so the sweep is an exact roll of the certified render - no re-render, no new numbers. If your renderer does not play the embed, the contact sheet below is the in-repo fallback; the master also ships as a v1.1.0 Release asset (render_sweep.mp4, 10 s H.264, 1024×512).
 
